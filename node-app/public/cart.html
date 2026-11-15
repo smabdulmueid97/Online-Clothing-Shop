@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cart — Eshop</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+  <a class="logo" href="/">Eshop</a>
+  <nav>
+    <a href="/">Home</a>
+    <a href="/#shop">Shop</a>
+    <a href="/cart.html">Cart <span class="cart-count" id="cart-count">0</span></a>
+  </nav>
+</header>
+<main>
+  <h1>Your Cart</h1>
+  <p style="color:#666">The cart is stored in your browser (localStorage). It is not saved on the server — Vercel serverless functions are stateless.</p>
+  <div id="content">Loading cart…</div>
+</main>
+<footer>Eshop — Node.js starter.</footer>
+<script src="/app.js"></script>
+<script>
+async function render() {
+  const el = document.getElementById("content");
+  const cart = getCart();
+  if (!cart.length) {
+    el.innerHTML = `<p>Your cart is empty.</p><a class="btn" href="/">Continue shopping</a>`;
+    return;
+  }
+  const res = await fetch(API + "/products?limit=50");
+  const data = await res.json();
+  const byId = Object.fromEntries(data.items.map((p) => [p.id, p]));
+  let total = 0;
+  const rows = cart.map((line) => {
+    const p = byId[line.id];
+    if (!p) return "";
+    const price = p.sale_price ?? p.price;
+    const sub = price * line.qty;
+    total += sub;
+    return `<tr>
+      <td><img src="${imgFor(p)}" alt="" style="width:64px;height:48px;object-fit:cover"> <a href="/product.html?id=${p.id}">${escapeHtml(p.name)}</a></td>
+      <td>${money(price)}</td>
+      <td><input type="number" min="1" max="99" value="${line.qty}" style="width:64px;padding:6px" onchange="setQty(${p.id}, this.value)"></td>
+      <td>${money(sub)}</td>
+      <td><button class="btn secondary" onclick="removeLine(${p.id})">Remove</button></td>
+    </tr>`;
+  }).join("");
+  el.innerHTML = `<table>
+    <tr><th>Product</th><th>Price</th><th>Qty</th><th>Subtotal</th><th></th></tr>
+    ${rows}
+    <tr><td colspan="3"><strong>Total</strong></td><td><strong>${money(total)}</strong></td><td></td></tr>
+  </table>
+  <p style="margin-top:16px">
+    <a class="btn" href="/checkout.html">Proceed to Checkout</a>
+    <button class="btn secondary" onclick="if(confirm('Empty the cart?')){saveCart([]);render();}">Clear Cart</button>
+  </p>`;
+}
+function setQty(id, v) {
+  const cart = getCart();
+  const line = cart.find((l) => l.id === id);
+  if (line) line.qty = Math.max(1, parseInt(v, 10) || 1);
+  saveCart(cart); render();
+}
+function removeLine(id) { saveCart(getCart().filter((l) => l.id !== id)); render(); }
+render();
+</script>
+</body>
+</html>

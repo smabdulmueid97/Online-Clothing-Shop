@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Product — Eshop</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+  <a class="logo" href="/">Eshop</a>
+  <nav>
+    <a href="/">Home</a>
+    <a href="/#shop">Shop</a>
+    <a href="/cart.html">Cart <span class="cart-count" id="cart-count">0</span></a>
+  </nav>
+</header>
+<main>
+  <p><a href="/">← Back to shop</a></p>
+  <div id="content">Loading product…</div>
+</main>
+<footer>Eshop — Node.js starter.</footer>
+<script src="/app.js"></script>
+<script>
+(async () => {
+  const id = new URLSearchParams(location.search).get("id");
+  const el = document.getElementById("content");
+  if (!id) { el.innerHTML = `<div class="error">No product id given.</div>`; return; }
+  try {
+    const res = await fetch(API + "/products/" + encodeURIComponent(id));
+    if (!res.ok) { el.innerHTML = `<div class="error">Product not found (HTTP ${res.status}).</div>`; return; }
+    const p = await res.json();
+    document.title = p.name + " — Eshop";
+    const offer = p.special_offer
+      ? `<span class="was">${money(p.price)}</span> <span class="offer">-${p.special_offer}% special offer</span><br>`
+      : "";
+    el.innerHTML = `<div class="detail">
+      <div><img src="${imgFor(p)}" alt="${escapeHtml(p.name)}"></div>
+      <div>
+        <div class="cat">${escapeHtml(p.category)} · ${escapeHtml(p.color)}</div>
+        <h1>${escapeHtml(p.name)}</h1>
+        <p class="price">${offer}${money(p.sale_price)}</p>
+        <p>${escapeHtml(p.description)}</p>
+        <p><label>Quantity <input type="number" id="qty" value="1" min="1" max="99" style="width:64px;padding:8px"></label></p>
+        <button class="btn" id="add">Add to Cart</button>
+        <a class="btn secondary" href="/cart.html">View Cart</a>
+        ${p.image_file_in_repo ? "" : `<p style="color:#666;font-size:13px">Note: the image file named in the original database (${escapeHtml(p.image)}) is not in the repo, so a placeholder is shown.</p>`}
+      </div>
+    </div>`;
+    document.getElementById("add").onclick = () => {
+      const qty = Math.max(1, parseInt(document.getElementById("qty").value || "1", 10) || 1);
+      addToCart(p.id, qty);
+      location.href = "/cart.html";
+    };
+  } catch (e) {
+    el.innerHTML = `<div class="error">Could not load product (${escapeHtml(e.message)}).</div>`;
+  }
+})();
+</script>
+</body>
+</html>

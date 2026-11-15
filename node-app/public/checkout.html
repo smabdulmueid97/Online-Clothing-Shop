@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checkout — Eshop</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+  <a class="logo" href="/">Eshop</a>
+  <nav>
+    <a href="/">Home</a>
+    <a href="/#shop">Shop</a>
+    <a href="/cart.html">Cart <span class="cart-count" id="cart-count">0</span></a>
+  </nav>
+</header>
+<main>
+  <h1>Checkout</h1>
+  <div class="notice"><strong>Demo checkout only.</strong> There is no database, no account and no
+  payment in this starter. Submitting this form places <strong>no order</strong> and charges nothing —
+  it only shows what the API returns (HTTP 501, not implemented). The original PHP checkout
+  (<code>checkout.php</code> → <code>server/place_order.php</code>) needs a hosted MySQL database
+  and a payment provider before it can be ported.</div>
+  <div id="summary"></div>
+  <form class="checkout" id="form">
+    <label for="name">Name</label>
+    <input id="name" name="name" required>
+    <label for="email">Email</label>
+    <input id="email" name="email" type="email" required>
+    <label for="phone">Phone</label>
+    <input id="phone" name="phone" type="tel" required>
+    <label for="city">City</label>
+    <input id="city" name="city" required>
+    <label for="address">Address</label>
+    <input id="address" name="address" required>
+    <p id="total-line"></p>
+    <button class="btn" type="submit">Place Order (demo — no order is created)</button>
+  </form>
+  <div id="result" style="margin-top:16px"></div>
+</main>
+<footer>Eshop — Node.js starter.</footer>
+<script src="/app.js"></script>
+<script>
+(async () => {
+  const cart = getCart();
+  const res = await fetch(API + "/products?limit=50");
+  const data = await res.json();
+  const byId = Object.fromEntries(data.items.map((p) => [p.id, p]));
+  let total = 0;
+  cart.forEach((l) => { const p = byId[l.id]; if (p) total += (p.sale_price ?? p.price) * l.qty; });
+  document.getElementById("summary").innerHTML =
+    cart.length ? `<p>${cart.reduce((n, l) => n + l.qty, 0)} item(s) in your cart.</p>` : `<p>Your cart is empty. <a href="/">Go shopping first.</a></p>`;
+  document.getElementById("total-line").innerHTML = `<strong>Total amount: ${money(total)}</strong>`;
+  document.getElementById("form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!cart.length) { document.getElementById("result").innerHTML = `<div class="error">Your cart is empty — nothing to check out.</div>`; return; }
+    const r = await fetch(API + "/checkout", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: cart, total }),
+    });
+    const body = await r.json();
+    document.getElementById("result").innerHTML =
+      `<div class="notice"><strong>API responded HTTP ${r.status}:</strong> ${escapeHtml(body.error || "")}<br>${escapeHtml(body.detail || "")}</div>`;
+  });
+})();
+</script>
+</body>
+</html>
